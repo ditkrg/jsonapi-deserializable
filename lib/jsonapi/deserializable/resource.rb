@@ -189,7 +189,7 @@ module JSONAPI
 
         register_mappings(hash.keys, "/relationships/#{key}")
 
-        if options.[](:with_included)
+        if options.[](:with_included) && id.present? && type.present?
           return {**hash, key.to_sym => find_in_included(id:, type:)}
         end
 
