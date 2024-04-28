@@ -53,7 +53,7 @@ module JSONAPI
         @attributes    = @data['attributes'] || {}
         @relationships = @data['relationships'] || {}
 
-        # Objectifies each included object 
+        # Objectifies each included object
         @included = initialize_included(payload.key?('included') ? payload['included'] : [])
 
         deserialize!
@@ -76,7 +76,7 @@ module JSONAPI
         # For each included, create an object of the correct type
         included.map do |data|
 
-          # Find the key of type 
+          # Find the key of type
           key = key_to_type_mapping_inverted[data['type']&.to_s&.to_sym]
 
           # Finds the deserializer
@@ -84,7 +84,7 @@ module JSONAPI
 
           # If the deserializer is not available, uses the current class to create the object
           if deserializer.blank?
-            # Important to wrap this around this hash. This will be crucial for use in method `find_in_included/2` defined in the same class. 
+            # Important to wrap this around this hash. This will be crucial for use in method `find_in_included/2` defined in the same class.
             # If the deserializer is created using the current class, we will need to pluck all its attributes
             { has_deserializer: false, object: self.class.new({ 'data' => data }) }
           else
@@ -112,7 +112,7 @@ module JSONAPI
         # In the example above, people is the type of the objects in "included", but the name of the key is 'author'
         # It creates this mapping so that to find the right derserializer for the given key (if any)
         self.class.has_one_rel_options.map { |h, k| { h => k[:type]} }.reduce({}, :merge).invert.merge(
-          self.class.has_many_rel_options.map { |h, k| { h => k[:type]} }.reduce({}, :merge) 
+          self.class.has_many_rel_options.map { |h, k| { h => k[:type]} }.reduce({}, :merge)
         )
       end
 
@@ -186,13 +186,13 @@ module JSONAPI
         id   = val['data'] && val['data']['id']
         type = val['data'] && val['data']['type']
         hash = block.call(val, id, type, self.class.key_formatter.call(key))
-        
+
         register_mappings(hash.keys, "/relationships/#{key}")
 
-        if options.[](:with_included)
+        if options.[](:with_included) && id.present? && type.present?
           return {**hash, key.to_sym => find_in_included(id:, type:)}
         end
-        
+
         hash
       end
       # rubocop: enable Metrics/AbcSize
@@ -204,7 +204,7 @@ module JSONAPI
 
 
         options = self.class.has_many_rel_options[key] || {}
-        
+
         return {} unless block && val['data'].is_a?(Array)
 
         ids   = val['data'].map { |ri| ri['id'] }
@@ -225,7 +225,7 @@ module JSONAPI
         cross_reference = @included.select { |doc| doc[:object]&.instance_variable_get(:@id) == id && doc[:object].instance_variable_get(:@type) == type  }&.first
 
         # If the deserializer is created using a given class, we will need to call .to_h on it instead of plucking all its attributes
-        cross_reference[:has_deserializer] ? cross_reference[:object].to_h : cross_reference[:object].instance_variable_get(:@attributes).to_h
+        cross_reference[:has_deserializer] ? cross_reference[:object].to_h : cross_reference[:object].instance_variable_get(:@attributes).to_h.merge({ id: id, type: type })
       end
       # rubocop: enable Metrics/AbcSize
     end
